@@ -1,0 +1,97 @@
+name: Build Highway Overdrive APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Highway_Overdrive_3D_Godot_Project.zip"
+      - ".github/workflows/android-apk.yml"
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-22.04
+
+    container:
+      image: barichello/godot-ci:4.2.2
+
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Prepare Godot project
+        run: |
+          mkdir -p /tmp/highway
+          unzip -q Highway_Overdrive_3D_Godot_Project.zip -d /tmp/highway
+          mkdir -p /tmp/highway/Highway_Overdrive_3D/build
+
+          PROJECT=/tmp/highway/Highway_Overdrive_3D
+
+          cat > "$PROJECT/export_presets.cfg" <<'EOF'
+          [preset.0]
+
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/HighwayOverdrive.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/export_format=0
+          gradle_build/min_sdk="23"
+          gradle_build/target_sdk="34"
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          package/unique_name="com.highwayoverdrive.game"
+          package/name="Highway Overdrive"
+          package/signed=true
+          version/code=1
+          version/name="1.0"
+          screen/immersive_mode=true
+          EOF
+
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+
+      - name: Configure Godot
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mkdir -p "$HOME/.config"
+          if [ -d /root/.local/share/godot/export_templates/4.2.2.stable ]; then
+            cp -a /root/.local/share/godot/export_templates/4.2.2.stable \
+              "$HOME/.local/share/godot/export_templates/"
+          fi
+          if [ -d /root/.config/godot ]; then
+            cp -a /root/.config/godot "$HOME/.config/"
+          fi
+
+      - name: Import project resources
+        run: |
+          godot --headless --editor --path "$PROJECT" --quit
+
+      - name: Export Android APK
+        run: |
+          mkdir -p "$PROJECT/build"
+          godot --headless --path "$PROJECT" \
+            --export-debug "Android" \
+            "$PROJECT/build/HighwayOverdrive.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Highway-Overdrive-APK
+          path: /tmp/highway/Highway_Overdrive_3D/build/HighwayOverdrive.apk
+          if-no-files-found: error
