@@ -75,8 +75,19 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           export/android/android_sdk_path = "$ANDROID_HOME"
           EOF
-          cat > "$PROJECT_DIR/export_presets.cfg" <<'EOF'
+          mkdir -p "$HOME/.android"
+keytool -genkeypair -v \
+  -keystore "$HOME/.android/debug.keystore" \
+  -storepass android \
+  -alias androiddebugkey \
+  -keypass android \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Android Debug,O=Android,C=US"
+          cat > "$PROJECT_DIR/export_presets.cfg" <<EOF
           [preset.0]
+          keystore/debug="$HOME/.android/debug.keystore"
+keystore/debug_user="androiddebugkey"
+keystore/debug_password="android"
           name="Android"
           platform="Android"
           runnable=true
