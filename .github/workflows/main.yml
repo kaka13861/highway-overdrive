@@ -41,9 +41,44 @@ jobs:
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
 
           sdkmanager --sdk_root="$ANDROID_HOME" \
-            "platform-tools" \
-            "platforms;android-34" \
-            "build-tools;34.0.0"
+            
+      - name: Export Android APK
+        shell: bash
+        run: |
+          set -e
+
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export ANDROID_HOME=/opt/android-sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+
+          echo "Java:"
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+
+          mkdir -p "$HOME/.config/godot"
+
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          EOF
+
+          echo "Godot editor settings:"
+          cat "$HOME/.config/godot/editor_settings-4.tres"
+
+          godot --headless --editor --path "$PROJECT_DIR" --quit
+
+          godot --headless \
+            --path "$PROJECT_DIR" \
+            --export-debug "Android" \
+            "$PROJECT_DIR/build/HighwayOverdrive.apk"
+
+          test -s "$PROJECT_DIR/build/HighwayOverdrive.apk"
+          echo "APK export completed successfully."
+
 
           echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
